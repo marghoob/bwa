@@ -277,7 +277,7 @@ static void bwt_reverse_intvs(bwtintv_v *p)
 	}
 }
 
-int bwt_smem1(const bwt_t *bwt, int len, const uint8_t *q, int x, int min_intv, bwtintv_v *mem, bwtintv_v *tmpvec[2])
+int bwt_smem1(const bwt_t *bwt, int len, const uint8_t *q, int x, int max_len, int min_intv, bwtintv_v *mem, bwtintv_v *tmpvec[2])
 {
 	int i, j, c, ret;
 	bwtintv_t ik, ok[4];
@@ -298,7 +298,7 @@ int bwt_smem1(const bwt_t *bwt, int len, const uint8_t *q, int x, int min_intv, 
 			bwt_extend(bwt, &ik, ok, 0);
 			if (ok[c].x[2] != ik.x[2]) { // change of the interval size
 				kv_push(bwtintv_t, *curr, ik);
-				if (ok[c].x[2] < min_intv) break; // the interval size is too small to be extended further
+				if (ok[c].x[2] == 0 || (i - x > max_len && ok[c].x[2] < min_intv)) break;
 			}
 			ik = ok[c]; ik.info = i + 1;
 		} else { // an ambiguous base
@@ -316,15 +316,14 @@ int bwt_smem1(const bwt_t *bwt, int len, const uint8_t *q, int x, int min_intv, 
 		for (j = 0, curr->n = 0; j < prev->n; ++j) {
 			bwtintv_t *p = &prev->a[j];
 			bwt_extend(bwt, p, ok, 1);
-			if (c < 0 || ok[c].x[2] < min_intv) { // keep the hit if reaching the beginning or an ambiguous base or the intv is small enough
+			if (c < 0 || ok[c].x[2] == 0 || (p->info - i - 1 > max_len && ok[c].x[2] < min_intv)) { // keep the hit if the intv is small enough
 				if (curr->n == 0) { // test curr->n>0 to make sure there are no longer matches
 					if (mem->n == 0 || i + 1 < mem->a[mem->n-1].info>>32) { // skip contained matches
 						ik = *p; ik.info |= (uint64_t)(i + 1)<<32;
 						kv_push(bwtintv_t, *mem, ik);
 					}
 				} // otherwise the match is contained in another longer match
-			}
-			if (c >= 0 && ok[c].x[2] >= min_intv && (curr->n == 0 || ok[c].x[2] != curr->a[curr->n-1].x[2])) {
+			} else if (curr->n == 0 || ok[c].x[2] != curr->a[curr->n-1].x[2]) {
 				ok[c].info = p->info;
 				kv_push(bwtintv_t, *curr, ok[c]);
 			}

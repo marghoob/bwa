@@ -23,8 +23,8 @@ typedef struct {
 typedef struct {
 	int a, b, q, r, w;
 	int flag;
-	int split_width;
-	int min_seed_len, max_occ, max_chain_gap;
+	int min_seed_len, max_seed_len, min_intv;
+	int max_occ, max_chain_gap;
 	int n_threads, chunk_size;
 	int pe_dir;
 	float mask_level;
