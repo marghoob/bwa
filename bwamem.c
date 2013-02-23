@@ -81,7 +81,7 @@ struct __smem_i {
 	const uint8_t *query;
 	int start, len;
 	bwtintv_v *matches; // matches; to be returned by smem_next()
-	bwtintv_v *sub;     // sub-matches inside the longest match; temporary
+	bwtintv_v *rev;
 	bwtintv_v *tmpvec[2]; // temporary arrays
 };
 
@@ -93,7 +93,7 @@ smem_i *smem_itr_init(const bwt_t *bwt)
 	itr->tmpvec[0] = calloc(1, sizeof(bwtintv_v));
 	itr->tmpvec[1] = calloc(1, sizeof(bwtintv_v));
 	itr->matches   = calloc(1, sizeof(bwtintv_v));
-	itr->sub       = calloc(1, sizeof(bwtintv_v));
+	itr->rev       = calloc(1, sizeof(bwtintv_v));
 	return itr;
 }
 
@@ -102,7 +102,7 @@ void smem_itr_destroy(smem_i *itr)
 	free(itr->tmpvec[0]->a); free(itr->tmpvec[0]);
 	free(itr->tmpvec[1]->a); free(itr->tmpvec[1]);
 	free(itr->matches->a);   free(itr->matches);
-	free(itr->sub->a);       free(itr->sub);
+	free(itr->rev->a);       free(itr->rev);
 	free(itr);
 }
 
@@ -116,17 +116,35 @@ void smem_set_query(smem_i *itr, int len, const uint8_t *query)
 
 const bwtintv_v *smem_next(smem_i *itr, int max_len, int min_intv)
 {
-	int i, max, max_i;
-	itr->tmpvec[0]->n = itr->tmpvec[1]->n = itr->matches->n = itr->sub->n = 0;
+	int i, ori_start;
+	itr->tmpvec[0]->n = itr->tmpvec[1]->n = itr->matches->n = itr->rev->n = 0;
 	if (itr->start >= itr->len || itr->start < 0) return 0;
 	while (itr->start < itr->len && itr->query[itr->start] > 3) ++itr->start; // skip ambiguous bases
 	if (itr->start == itr->len) return 0;
+	ori_start = itr->start;
 	itr->start = bwt_smem1(itr->bwt, itr->len, itr->query, itr->start, max_len, min_intv, itr->matches, itr->tmpvec); // search for SMEM
 	if (itr->matches->n == 0) return itr->matches; // well, in theory, we should never come here
-	for (i = max = 0, max_i = 0; i < itr->matches->n; ++i) { // look for the longest match
-		bwtintv_t *p = &itr->matches->a[i];
-		int len = (uint32_t)p->info - (p->info>>32);
-		if (max < len) max = len, max_i = i;
+	if (itr->start - ori_start > max_len) {
+		int j;
+		bwtintv_v *a = itr->tmpvec[0]; // reuse tmpvec[0] for merging
+		bwt_smem1(itr->bwt, itr->len, itr->query, itr->start - 1, max_len, min_intv, itr->rev, itr->tmpvec);
+		i = j = 0; a->n = 0;
+		while (i < itr->matches->n && j < itr->rev->n) { // ordered merge
+			int64_t xi = itr->matches->a[i].info>>32<<32 | (itr->len - (uint32_t)itr->matches->a[i].info);
+			int64_t xj = itr->rev->a[j].info>>32<<32 | (itr->len - (uint32_t)itr->rev->a[j].info);
+			if (xi < xj) {
+				kv_push(bwtintv_t, *a, itr->matches->a[i]);
+				++i;
+			} else if ((uint32_t)itr->rev->a[j].info > ori_start) {
+				kv_push(bwtintv_t, *a, itr->rev->a[j]);
+				++j;
+			} else ++j;
+		}
+		for (; i < itr->matches->n; ++i) kv_push(bwtintv_t, *a, itr->matches->a[i]);
+		for (; j < itr->rev->n; ++j)
+			if ((uint32_t)itr->rev->a[j].info > ori_start)
+				kv_push(bwtintv_t, *a, itr->rev->a[j]);
+		kv_copy(bwtintv_t, *itr->matches, *a);
 	}
 	return itr->matches;
 }
