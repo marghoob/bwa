@@ -1,5 +1,5 @@
 CC=			gcc
-CFLAGS=		-g -Wall -O2
+CFLAGS=		-g -Wall -O2 -static
 AR=			ar
 DFLAGS=		-DHAVE_PTHREAD
 LOBJS=		utils.o kstring.o ksw.o bwt.o bntseq.o bwa.o bwamem.o bwamem_pair.o
@@ -9,7 +9,7 @@ AOBJS=		QSufSort.o bwt_gen.o bwase.o bwaseqio.o bwtgap.o bwtaln.o bamlite.o \
 			bwtsw2_chain.o fastmap.o bwtsw2_pair.o
 PROG=		bwa
 INCLUDES=	
-LIBS=		-lm -lz -lpthread
+LIBS=		-lm -lz -lpthread -static
 SUBDIRS=	.
 
 .SUFFIXES:.c .o .cc

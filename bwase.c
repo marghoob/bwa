@@ -373,6 +373,19 @@ static int64_t pos_5(const bwa_seq_t *p)
 	return -1;
 }
 
+void make_unmapped_if_beyond_contig(const bntseq_t *bns, bwa_seq_t *p) {
+	if (p->type != BWA_TYPE_NO_MATCH) {
+		int j = pos_end(p) - p->pos; // j is the length of the reference in the alignment
+
+		// get seqid
+        int seqid;
+		int nn = bns_cnt_ambi(bns, p->pos, j, &seqid);
+		if (p->pos + j - bns->anns[seqid].offset > bns->anns[seqid].len) {
+            p->type = BWA_TYPE_NO_MATCH;
+        }
+    }
+}
+
 void bwa_print_sam1(const bntseq_t *bns, bwa_seq_t *p, const bwa_seq_t *mate, int mode, int max_top2)
 {
 	int j;
