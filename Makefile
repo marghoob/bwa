@@ -1,6 +1,6 @@
 CC=			gcc
 #CC=			clang --analyze
-CFLAGS=		-g -Wall -Wno-unused-function -O2
+CFLAGS=		-g -Wall -Wno-unused-function -O2 -static
 WRAP_MALLOC=-DUSE_MALLOC_WRAPPERS
 AR=			ar
 DFLAGS=		-DHAVE_PTHREAD $(WRAP_MALLOC)
@@ -11,7 +11,7 @@ AOBJS=		QSufSort.o bwt_gen.o bwase.o bwaseqio.o bwtgap.o bwtaln.o bamlite.o \
 			bwtsw2_chain.o fastmap.o bwtsw2_pair.o
 PROG=		bwa
 INCLUDES=	
-LIBS=		-lm -lz -lpthread
+LIBS=		-lm -lz -lpthread -static
 SUBDIRS=	.
 
 .SUFFIXES:.c .o .cc

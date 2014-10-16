@@ -43,6 +43,7 @@ typedef struct {
 extern int g_log_n[256]; // in bwase.c
 static kh_b128_t *g_hash;
 
+void make_unmapped_if_beyond_contig(const bntseq_t *bns, bwa_seq_t *p);
 void bwa_aln2seq_core(int n_aln, const bwt_aln1_t *aln, bwa_seq_t *s, int set_main, int n_multi);
 void bwa_aln2seq(int n_aln, const bwt_aln1_t *aln, bwa_seq_t *s);
 int bwa_approx_mapQ(const bwa_seq_t *p, int mm);
@@ -703,6 +704,8 @@ void bwa_sai2sam_pe_core(const char *prefix, char *const fn_sa[2], char *const f
 				strcat(p[0]->bc, p[1]->bc);
 				strcpy(p[1]->bc, p[0]->bc);
 			}
+            make_unmapped_if_beyond_contig(bns, p[0]);
+            make_unmapped_if_beyond_contig(bns, p[1]);
 			bwa_print_sam1(bns, p[0], p[1], opt.mode, opt.max_top2);
 			bwa_print_sam1(bns, p[1], p[0], opt.mode, opt.max_top2);
 			if (strcmp(p[0]->name, p[1]->name) != 0) err_fatal(__func__, "paired reads have different names: \"%s\", \"%s\"\n", p[0]->name, p[1]->name);
